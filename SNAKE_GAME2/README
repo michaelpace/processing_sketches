@@ -2,3 +2,4 @@ basic cave game, created for fun & to test out processing.
 
 NOTE:
 there must be a file called highscore.txt in the same directory as SNAKE_GAME2.pde for the game to be able to run.
+the contents of the file should start out as simply the number 0, and should contain the high score after the first game.
