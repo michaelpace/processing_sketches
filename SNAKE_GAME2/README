@@ -1,3 +1,5 @@
+(this is very old code)
+
 basic cave game, created for fun & to test out processing.
 - fly close to the walls to accumulate points more quickly.
 - if you scrape a wall, you can still continue (with impaired vision) until you suffer a fatal collision. 
