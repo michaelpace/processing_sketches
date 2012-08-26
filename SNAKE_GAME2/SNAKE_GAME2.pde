@@ -1,5 +1,5 @@
 BufferedReader reader;
-String line;
+String savedScore;
 PrintWriter output;
 
 wall wl = new wall(67);
@@ -7,101 +7,85 @@ ship sh = new ship();
 block bl = new block();
 score sc = new score();
 
-int blockcounter;
+int blockCounter;
 String state;
 color bg;
 int fr;
-String highscore;
+String highScore;
 boolean ready;
-boolean ridin;
-boolean screwed;
+boolean wallRiding;
+boolean impaired;
 
 void setup(){
   size(400, 200);
-  reader = createReader("highscore.txt");
+  reader = createReader("highScore.txt");
   try {
-    line = reader.readLine();
+    savedScore = reader.readLine();
     } 
   catch (IOException e) {
     e.printStackTrace();
-    line = null;
+    savedScore = null;
   }
   fr = 23;
   frameRate(fr);
   bg = 255;
   fill(0);
   noStroke();
-  wl.drawwall();
-  blockcounter = 0;
+  wl.drawWall();
+  blockCounter = 0;
   ready = false;
-  ridin = false;
-  screwed = false;
-  state = "yi";
+  wallRiding = false;
+  impaired = false;
+  state = "pressAnyKeyScreen";
 }
 
 void draw(){
   frameRate(fr);
   
-  // save high score
-  if(line != null){
-    if (sc.playerscore/10 > int(line)){
-      output = createWriter("highscore.txt"); 
-      output.print(sc.playerscore/10);
-      output.close();
-      reader = createReader("highscore.txt");
-      try {
-        line = reader.readLine();
-      } 
-      catch (IOException e) {
-        e.printStackTrace();
-        line = null;
-      }
-    }
-  }
   
   // increase speed
-  if (sc.playerscore%500==0 && sc.playerscore!=0){
+  if (sc.playerScore%500==0 && sc.playerScore!=0){
     fr+=2;
   }
   
   
-  if (state.equals("er")){
-    blockcounter += 1;
-    if(blockcounter%int(random(50, 90))==0 && random(2) >= 0.5){
-      bl.insertblock();
+  if (state.equals("playScreen")){
+    blockCounter += 1;
+    if(blockCounter%int(random(50, 90))==0 && random(2) >= 0.5){
+      bl.insertBlock();
     }
-    if(ridin) bg = 235;
+    if(wallRiding) bg = 235;
     else bg = 255;
-    if(!screwed)background(bg);
-    wl.updatewall();
-    sh.updateship();
-    sc.updatescore();
-    wl.drawwall();
-    sc.drawscore();
-    bl.updateblock();
-    bl.drawblock();
-    sh.drawship();
+    if(!impaired)background(bg);
+    wl.updateWall();
+    sh.updateShip();
+    sc.updateScore();
+    wl.drawWall();
+    sc.drawScore();
+    bl.updateBlock();
+    bl.drawBlock();
+    sh.drawShip();
   }
   
-  else if (state.equals("san")){
+  else if (state.equals("yourScoreScreen")){
     background(random(250, 255));
     for(int i = 0; i < width; i ++){
       fill(int(random(100, 200)));
-      if(i%10==0) text(sc.playerscore/10, (i*2.1)+2, i+12);
+      if(i%10==0) text(sc.playerScore/10, (i*2.1)+2, i+12);
     }
   }
   
-  else if(state.equals("si")){
+  else if(state.equals("highScoreScreen")){
     background(random(250, 255));
     for(int i = 0; i < width; i ++){
       fill(int(random(100, 200)));
-      if(i%10==0) text("high score = " + line, (i*2.1)+2, i+12);
+      if(i%10==0) text("high score = " + savedScore, (i*2.1)+2, i+12);
     }
   }
   
-  // state equals yi
+  // state equals pressAnyKeyScreen
   else{
-    assert state.equals("yi");
+    assert state.equals("pressAnyKeyScreen");
     background(random(250, 255));
     for(int i = 0; i < width; i ++){
       fill(int(random(100, 200)));
@@ -110,11 +94,26 @@ void draw(){
   }
 }
 
-void restart(){
-  state = "san";
+void endGame(){
+  if(savedScore != null
+     && sc.playerScore/10 > int(savedScore)){
+      output = createWriter("highScore.txt"); 
+      output.print(sc.playerScore/10);
+      output.close();
+      reader = createReader("highScore.txt");
+      try {
+        savedScore = reader.readLine();
+      } 
+      catch (IOException e) {
+        e.printStackTrace();
+        savedScore = "0";
+      }
+  }
+
+  state = "yourScoreScreen";
   fr = 23;
   wl.closing = 0;
-  screwed = false;
+  impaired = false;
 }
 
 void keyReleased(){
@@ -122,15 +121,15 @@ void keyReleased(){
 }
 
 void keyPressed(){
-  if(state.equals("yi")) state = "er";
+  if(state.equals("pressAnyKeyScreen")) state = "playScreen";
   else if (ready){
-    if(state.equals("san")) state = "si";
-    else if(state.equals("si")){
-      sc.resetscore();
-      bl.resetblock();
-      sh.resetship();
+    if(state.equals("yourScoreScreen")) state = "highScoreScreen";
+    else if(state.equals("highScoreScreen")){
+      sc.resetScore();
+      bl.resetBlock();
+      sh.resetShip();
       wl = new wall(67);
-      state = "er";
+      state = "playScreen";
     }
   }
   ready = false;
@@ -145,16 +144,16 @@ class wall{
   public float closing;
   public boolean isclosing = true;
   
-  wall(int tempypos){
+  wall(int tempyPos){
     for(int i = 0; i < vals.length; i++){
-      vals[i] = tempypos;
+      vals[i] = tempyPos;
     }
     dir = 0;
     temp = 0;
     closing = 0;
   }
   
-  void updatewall(){
+  void updateWall(){
     // rate at which the tunnel closes
     if(isclosing) closing -= random(.075, .3);
     else closing += random(1, 10);
@@ -190,20 +189,20 @@ class wall{
     }
   }
   
-  void drawwall(){
+  void drawWall(){
     for(int i = 0; i < vals.length; i++){
-      if(screwed)fill(random(100,200));
+      if(impaired)fill(random(100,200));
       else fill(0);
       int ytop = vals[i];
       float ybot = vals[i]+(height/2)+closing;
       text("-", i*10, ytop);
       text("-", i*10, ybot);
       fill(255);
-      if(!screwed)rect(i*10, vals[i]-3, 10, (height/2)+closing-3);
-      if(ridin)fill(random(100));
+      if(!impaired)rect(i*10, vals[i]-3, 10, (height/2)+closing-3);
+      if(wallRiding)fill(random(100));
       else fill(0);
       // dots on top
-      if(screwed)fill(random(200, 255));
+      if(impaired)fill(random(200, 255));
       for(int j = 0; j < vals[i]-5; j+=15){
         text(".", i*10, j);
       }
@@ -217,25 +216,25 @@ class wall{
 }
 
 class ship{
-  public float ypos;
+  public float yPos;
   float traj;
-  float[] tvals = new float[8];
+  float[] tailVals = new float[8];
  
  ship(){
-  ypos = 100;
+  yPos = 100;
   traj = 0.0;
-  for(int i = 0; i < tvals.length; i++){
-    tvals[i] = 0.0;
+  for(int i = 0; i < tailVals.length; i++){
+    tailVals[i] = 0.0;
   }
  }
  
- void resetship(){
-  ypos = 100;
+ void resetShip(){
+  yPos = 100;
   traj = 0.0;
-  newtail();
+  newTail();
  }
  
- void updateship(){
+ void updateShip(){
    // movement
    if(keyPressed == true){
      if(traj>0) traj -= 1.25;
@@ -245,115 +244,114 @@ class ship{
      if(traj<0) traj += 1.25;
      else traj += .5;
    }
-   ypos += traj;
+   yPos += traj;
    
-   updatetail();
+   updateTail();
    
    // check for collision with wall
-   if ((ypos < wl.vals[8] || ypos > wl.vals[8] + (height/2) + wl.closing || abs(ypos - bl.blockvals[8] + 0.0) <= 9) && keyPressed){
-     if(screwed){
-       state = "san";
-       restart();
+   if ((yPos < wl.vals[8] || yPos > wl.vals[8] + (height/2) + wl.closing || abs(yPos - bl.blockVals[8] + 0.0) <= 9) && keyPressed){
+     if(impaired){
+       state = "yourScoreScreen";
+       endGame();
      }
-     else screwed = true;
+     else impaired = true;
    }
-   else if((ypos < wl.vals[8] || ypos > wl.vals[8] + (height/2) + wl.closing || abs(ypos - bl.blockvals[8] + 0.0) <= 9) && !keyPressed){
-     if(screwed){
-       state = "san";
-       restart();
+   else if((yPos < wl.vals[8] || yPos > wl.vals[8] + (height/2) + wl.closing || abs(yPos - bl.blockVals[8] + 0.0) <= 9) && !keyPressed){
+     if(impaired){
+       state = "yourScoreScreen";
+       endGame();
      }
-     else screwed = true;
+     else impaired = true;
    }
  }
   
-  void drawship(){
-    if(screwed)fill(random(random(0, 10), random(245, 255)));
-    text(">", 80, ypos);
-    drawtail();
+  void drawShip(){
+    if(impaired)fill(random(random(0, 10), random(245, 255)));
+    text(">", 80, yPos);
+    drawTail();
   }
   
-  void updatetail(){
-   // tail
-   for(int i = 0; i < tvals.length-1; i++){
-     tvals[i] = tvals[i+1];
+  void updateTail(){
+   for(int i = 0; i < tailVals.length-1; i++){
+     tailVals[i] = tailVals[i+1];
    }
-   tvals[tvals.length-1] = ypos;
+   tailVals[tailVals.length-1] = yPos;
   }
   
-  void drawtail(){
-    for(int i = 0; i < tvals.length; i++){
-      text("-", i*10, tvals[i]);
+  void drawTail(){
+    for(int i = 0; i < tailVals.length; i++){
+      text("-", i*10, tailVals[i]);
     }
   }
   
-  void newtail(){
-   for(int i = 0; i < tvals.length; i++){
-     tvals[i] = 100;
+  void newTail(){
+   for(int i = 0; i < tailVals.length; i++){
+     tailVals[i] = 100;
    }
   }
 }
 
 class block{
-  public float[] blockvals = new float[41];
+  public float[] blockVals = new float[41];
   
   block(){
-    for(int i = 0; i < blockvals.length; i++){
-      blockvals[i] = -200.0;
+    for(int i = 0; i < blockVals.length; i++){
+      blockVals[i] = -200.0;
     }
   }
   
-  void resetblock(){
-    for(int i = 0; i < blockvals.length; i++){
-      blockvals[i] = -200.0;
+  void resetBlock(){
+    for(int i = 0; i < blockVals.length; i++){
+      blockVals[i] = -200.0;
     }
   }
   
-  void insertblock(){
-    blockvals[blockvals.length-1] = random(wl.vals[wl.vals.length-1]+5, wl.vals[wl.vals.length-1]+(height/2)+wl.closing-5);
+  void insertBlock(){
+    blockVals[blockVals.length-1] = random(wl.vals[wl.vals.length-1]+5, wl.vals[wl.vals.length-1]+(height/2)+wl.closing-5);
   }
   
-  void updateblock(){
-    for(int i = 0; i < blockvals.length-1; i++){
-      blockvals[i] = blockvals[i+1];
+  void updateBlock(){
+    for(int i = 0; i < blockVals.length-1; i++){
+      blockVals[i] = blockVals[i+1];
     }
-    blockvals[blockvals.length-1] = -200.0;
+    blockVals[blockVals.length-1] = -200.0;
   }
   
-  void drawblock(){
-    if(screwed) fill(random(100));
+  void drawBlock(){
+    if(impaired) fill(random(100));
     else fill(0);
-    for(int i = 0; i < blockvals.length; i++){
-      text("|", (i*10), blockvals[i]+2);
-      text("|", (i*10), blockvals[i]);
-      text("|", (i*10), blockvals[i]-2);
+    for(int i = 0; i < blockVals.length; i++){
+      text("|", (i*10), blockVals[i]+2);
+      text("|", (i*10), blockVals[i]);
+      text("|", (i*10), blockVals[i]-2);
     }
   }
 }
 
 class score{
-  int playerscore;
+  int playerScore;
   score(){
-    playerscore = 0;
+    playerScore = 0;
   }
   
-  void updatescore(){
-    if(abs(sh.ypos - wl.vals[8]) <= 12 || abs(sh.ypos - (wl.vals[8]+(height/2)) - wl.closing) <= 12){
-      ridin = true;
-      playerscore += 1;
+  void updateScore(){
+    if(abs(sh.yPos - wl.vals[8]) <= 12 || abs(sh.yPos - (wl.vals[8]+(height/2)) - wl.closing) <= 12){
+      wallRiding = true;
+      playerScore += 1;
     }
-    else ridin = false;
-    if(screwed) playerscore += 1;
-    playerscore += 1;
+    else wallRiding = false;
+    if(impaired) playerScore += 1;
+    playerScore += 1;
   }
   
-  void resetscore(){
-    playerscore = 0;
+  void resetScore(){
+    playerScore = 0;
   }
   
-  void drawscore(){
+  void drawScore(){
     fill(255);
     rect(0, 0, width, 12);
     fill(0);
-    text(playerscore/10, 1, 11);
+    text(playerScore/10, 1, 11);
   }
 }
